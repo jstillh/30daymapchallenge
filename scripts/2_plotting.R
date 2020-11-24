@@ -10,7 +10,7 @@
 # Set up R ----------------------------------------------------------------
 
 
-requiredPackages <- c("dplyr", "raster", "sp", "lubridate", "rgeos", "readxl", "purrr", "magick", "gifski")
+requiredPackages <- c("dplyr", "raster", "sp", "lubridate", "rgeos", "purrr", "magick")
 
 
 # install/load required packages:
