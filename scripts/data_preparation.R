@@ -1,0 +1,157 @@
+# 
+# 30 Days Map Challenge
+# Day 25 - Covid 19
+# Jonas Stillhard, November 2020
+
+# This script describes the data preparation for the 30daymapchallenge, day 25.
+# The data stems from open data zurich
+# https://github.com/openZH/covid_19
+# You need to retrieve all datasets in the following directory: 
+# https://github.com/openZH/covid_19/tree/master/fallzahlen_kanton_total_csv_v2
+# 
+# This can be done by either cloning the entire repository (it's huge!) or by only cloning the relevant 
+# directory following this so-thread - see answer by udondan.
+# https://stackoverflow.com/questions/600079/git-how-do-i-clone-a-subdirectory-only-of-a-git-repository
+# 
+# Either way, you then need to define the path to the respective folder as data_dir. 
+# The data can be found in the data-directory and is up to date until 23rd of November.
+# 
+# Population data stems from Bundesamt für Statistik. 
+# 
+# Spatial Polygons will be loaded using raster::get_data
+
+# Set up R ----------------------------------------------------------------
+
+
+requiredPackages <- c("dplyr", "raster", "sp", "lubridate", "rgeos", "readxl")
+
+
+# install/load required packages:
+if (exists("requiredPackages")) {
+  # install required packages that are not installed yet:
+  new.packages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
+  if(length(new.packages)) {
+    install.packages(new.packages)
+  }
+  # load required packages:
+  lapply(requiredPackages, library, character.only=T)
+}
+
+rm( new.packages, requiredPackages)
+
+
+# We are not using setwd() but define a char-string here
+w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
+
+
+# Change this. In Fact, you only need the file COVID19_Fallzahlen_CH_total_v2.csv in the Covid19 repo.
+data_dir <- "C:/Users/JS/Documents/R/covid_19"
+
+
+
+# Read Data ---------------------------------------------------------------
+
+
+# Now read in the f&%*in xls by BFS
+popDat <- readxl::read_excel("./data/population_data.xlsx", sheet = 1, col_names = T)
+
+# this will download the administrative boundaries of Switzerland
+ch <- raster::getData("GADM", country = "CHE", level = 1)
+
+sp::plot(ch)
+
+
+# Read in covid data
+covidData <- read.csv(paste0(data_dir, "/COVID19_Fallzahlen_CH_total_v2.csv"), stringsAsFactors = F)
+bfsMapping <- read.csv(paste0(w_dir, "/data/mappingCanton_BFS.csv"))
+
+
+head(covidData)
+str(covidData)
+
+
+# Data wrangling ----------------------------------------------------------
+# The following things are being done here: 
+# - Make date column to date format
+# - Remove FL
+# - create a column with number of new cases using dplyr::lag on ncumul_conf
+
+# Population data: 
+# - Tidy up the shitty file. 
+# - go for long format. Stupid BFS!
+
+# Change date column to date formant
+covidData$date <- as.Date(covidData$date)
+covidData$week <- lubridate::week(covidData$date)
+
+# Remove FL
+covidData <- covidData[covidData$abbreviation_canton_and_fl != "FL",]
+
+# Add BFS identifier
+covidData$bfs <- bfsMapping$bfs[match(covidData$abbreviation_canton_and_fl, bfsMapping$abk)]
+
+
+# Order df on date and canton to be able to do the lag operation below
+covidData <- covidData[order(covidData$abbreviation_canton_and_fl, covidData$date),]
+
+# Now, create a new_conf column 
+covidData$nconf <- ifelse(dplyr::lag(covidData$abbreviation_canton_and_fl) == covidData$abbreviation_canton_and_fl
+                            , covidData$ncumul_conf - dplyr::lag(covidData$ncumul_conf), NA)
+
+# Create a new dead column 
+covidData$ndead <- ifelse(dplyr::lag(covidData$abbreviation_canton_and_fl) == covidData$abbreviation_canton_and_fl
+                          , covidData$ncumul_deceased - dplyr::lag(covidData$ncumul_deceased), NA)
+
+
+# Create a identifier to join afterwards - we'll use the abbrevations
+ch$kt <- substr(ch$HASC_1, 4, 5)
+
+# We now create midpoints for each of the polygons of the cantons. We'll use these for the buffer applied afterwards
+cCentre <- rgeos::gCentroid(ch, byid = T, id = ch$abb)
+
+cCentre$id <- ch$kt
+
+
+# Now we create weekly values for each canton
+
+weeklyVals <- covidData %>% 
+  dplyr::group_by(abbreviation_canton_and_fl, week) %>% 
+  dplyr::summarise(nWeekNew = sum(na.omit(nconf))
+                   , nWeekDead = sum(na.omit(ndead))) %>% 
+  as.data.frame()
+
+colnames(weeklyVals) <- c("kt", "week", "nWeekNew", "nWeekDead")
+
+
+# Prepare population data
+popDat <- as.data.frame(popDat)
+
+# Row 3 contains the colnames we want to have. 
+# Row 7 contains the population (10k) per canton
+
+colnames(popDat) <- popDat[3,]
+popDat <- popDat[7,]
+popDat <- popDat[,4:ncol(popDat)]
+popDat <- t(popDat)
+popDat <- as.data.frame(popDat)
+
+# The colum,n containing the population data is a lovely factor (f%&çCk). change to numeric
+popDat$pop1k <- as.numeric(as.character(popDat$`7`))
+
+popDat$kt <- row.names(popDat)
+popDat$bfs <- bfsMapping$bfs[match(popDat$kt, bfsMapping$abk)]
+
+
+# To get a value per 100k inhabitants, we'll add the population data to the weeklyVals df
+popDat$pop100k <- popDat$pop1k/100
+
+weeklyVals$bfs <- bfsMapping$bfs[match(weeklyVals$kt, bfsMapping$abk)]
+
+weeklyVals$pop100k <- popDat$pop100k[match(weeklyVals$bfs, popDat$bfs)]
+
+# Create values per 100 k
+weeklyVals$nWeek100k <- weeklyVals$nWeekNew/weeklyVals$pop100k
+weeklyVals$nWeek100kD <- weeklyVals$nWeekDead/weeklyVals$pop100k
+
+# Save the workspace. 
+save.image(paste0(w_dir, "./data/dat.RData"))
