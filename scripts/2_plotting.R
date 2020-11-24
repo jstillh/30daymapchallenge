@@ -154,11 +154,8 @@ for(i in c(4:47)){
 # This requires quite some resources
 
 files <- list.files(paste0(w_dir, "/maps/png"), full.names = T)
-nms <- substr(files, 52, 53)
-nms <- gsub("_", " ", nms)
-names(files) <- as.numeric(nms)
 
-files <- files[order(names(files))]
+gc()
 
 images <- purrr::map(files, magick::image_read)
 images <- magick::image_join(images)
