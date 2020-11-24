@@ -10,7 +10,7 @@
 # Set up R ----------------------------------------------------------------
 
 
-requiredPackages <- c("dplyr", "raster", "sp", "lubridate", "rgeos", "readxl")
+requiredPackages <- c("dplyr", "raster", "sp", "lubridate", "rgeos", "readxl", "purrr", "magick")
 
 
 # install/load required packages:
@@ -30,6 +30,8 @@ rm( new.packages, requiredPackages)
 # We are not using setwd() but define a char-string here
 w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
 
+# Source the function by B. Bolker 
+source("http://www.math.mcmaster.ca/bolker/R/misc/legendx.R")
 
 
 # Read Data ---------------------------------------------------------------
@@ -61,12 +63,26 @@ weeklyVals$grps <- cut(weeklyVals$nWeek100k, seq(0, maxV, 10), labels = F, inclu
 # We now add the colors to the weekly vals DF
 weeklyVals$clr <- clr[match(weeklyVals$grps, names(clr))]
 
+
+# Add buffer for legend. 
+# Bit hacky...
+buffP <- sp::SpatialPoints(coords = matrix(c(780000, 85000), ncol = 2))
+b1 <- raster::buffer(buffP, 750)
+buffP <- sp::SpatialPoints(coords = matrix(c(780000, (85000 + 4.5*750)), ncol = 2))
+b2 <- raster::buffer(buffP, 5 * 750)
+buffP <- sp::SpatialPoints(coords = matrix(c(780000, (85000 + 9.5 * 750)), ncol = 2))
+b3 <- raster::buffer(buffP, 10 * 750)
+buffP <- sp::SpatialPoints(coords = matrix(c(780000, (85000 + 19.5 * 750)), ncol = 2))
+b4 <- raster::buffer(buffP, 20 * 750)
+buffP <- sp::SpatialPoints(coords = matrix(c(780000, (85000 + 24.5*750)), ncol = 2))
+b5 <- raster::buffer(buffP, 25 * 750)
+
 # Create layout matrix
-
-lyt <- matrix(c(c(2, 3, 3, 3, 4, 4, 4), rep(c(rep(1, 6), 5),2), rep(c(rep(1, 6), 6),2)), ncol = 7, nrow = 5, byrow = T)
+lyt <- matrix(c(c(2, 3, 3, 3, 4, 4, 4), rep(c(rep(1, 6), 5), 4)), ncol = 7, nrow = 5, byrow = T)
 layout(lyt, widths = rep(1, 7), heights = rep(1, 5))
-layout.show(n = 6)
+layout.show(n = 5)
 
+# Create a total cases dataset to add to the plots
 totCases <- weeklyVals %>% 
   dplyr::group_by(week) %>% 
   dplyr::summarise(nCases = sum(nWeekNew)
@@ -75,12 +91,16 @@ totCases <- weeklyVals %>%
 
 
 for(i in c(4:47)){
-  png(paste0(w_dir, "/maps/png/", i, "_day25.png")
+  # Add a leading zero if i < 10
+  k <- ifelse(nchar(i) == 1, paste0("0", i), i)
+  
+  png(paste0(w_dir, "/maps/png/", k, "_day25.png")
       , width = 2000, height = 1500, res = 200)
   par(mar = rep(.8, 4))
 
   layout(lyt, widths = rep(1, 6), heights = rep(1, 5))
-  
+
+
   
   
   x <- weeklyVals[weeklyVals$week == i,]
@@ -90,8 +110,17 @@ for(i in c(4:47)){
   cBuff <- raster::buffer(cCentre, width = cCentre$nWeekD*750, dissolve = F)
   plot(ch, col = ch$col)
   plot(cBuff, add = T, lwd = 2)
+  plot(b1, add = T, lwd = 1.5)
+  plot(b2, add = T, lwd = 1.5)
+  plot(b3, add = T, lwd = 1.5)
+  plot(b4, add = T, lwd = 1.5)
+  plot(b5, add = T, lwd = 1.5)
   
-  
+  text(x = 780000, y  = 81000, "Deceased/100k per week")
+  text(x = 780000, y = 85000+13*750, "5")
+  text(x = 780000, y = 85000+23*750, "10")
+  text(x = 780000, y = 85000+43*750, "20")
+  text(x = 780000, y = 85000+53*750, "25")
   
   plot(0, type = "n", axes = F, xlab = "", ylab = "")
   text(0.57, 0.5, paste0("Week ", i), adj = 0, cex = 2)
@@ -99,51 +128,40 @@ for(i in c(4:47)){
   
   plot(0, xlim = c(3, 52), ylim = c(0, 55000), axes = F, type = "n", ylab = "", xlab = "week")
   lines(totCases$week[totCases$week <= i], totCases$nCases[totCases$week <= i], lwd = 1.5, col = "blue")
-  text( x= 4, y = 45000, "New cases/week", adj = 0)
-  text(x = 4, y = 40000, paste("Total cases:", sum(totCases$nCases[totCases$week <= i])), adj = 0)
+  text( x= 4, y = 50000, "New cases/week", adj = 0)
+  text(x = 4, y = 45000, paste("Total cases:", sum(totCases$nCases[totCases$week <= i])), adj = 0)
   axis(1, at = seq(4, 48, 4), labels = seq(4, 48, 4), line = .5)
   axis(2, at = seq(0, 55000, 5000), labels = seq(0, 55000, 5000), las = 1)
   
   plot(0, xlim = c(3, 52), ylim = c(0, 650), axes = F, type = "n", xlab = "week", ylab = "")
   lines(totCases$week[totCases$week <= i], totCases$nMort[totCases$week <= i], lwd = 1.5)
-  text( x= 4, y = 520, "New deceased/week", adj = 0)
+  text( x= 4, y = 590, "New deceased/week", adj = 0)
+  text(x = 4, y = 530, paste("Total deceased:", sum(totCases$nMort[totCases$week <= i])), adj = 0)
   axis(1, at = seq(4, 48, 4), labels = seq(4, 48, 4), line = .5)
-  axis(2, at = seq(0, 600, 30), labels = seq(0, 600, 30), las = 1)
+  axis(2, at = seq(0, 650, 50), labels = seq(0, 650, 50), las = 1)
   
   # Add color-legend
   plot(0, type = "n", axes = F, xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1))
-  legend(x = 0, y = 1, fill = clr[seq(0, 140, 10)], legend = seq(10, 1400, 100), bty = "n", y.intersp = 0.5, box.lwd = 0)
-  
-  # Add size-legend
-  plot(0, type = "n", axes = F, xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1))
-  legend(x = 0, y = 1,legend = seq() pch = 16, cex = c())
+  legend(x = 0, y = .75, fill = clr[seq(0, 140, 10)], legend = seq(100, 1400, 100), bty = "n", y.intersp = 1,  border = "NA"
+         , box.cex = c(2, 3))
+  text(x = 0, y = .8, "New cases/100k \n per week", adj = 0)
+
   
   dev.off()
 }
 
-for(i in c(10:46)){
-  x <- weeklyVals[weeklyVals$week == i,]
-  treemap::treemap(x, index = "kt", vSize = "nWeek100k", vColor = "clr", type = "color", algorithm = "pivotSize", sortID = "kt")
-}
+# Now, we are going to create the gif. 
+# This requires quite some resources
 
+files <- list.files(paste0(w_dir, "/maps/png"), full.names = T)
+nms <- substr(files, 52, 53)
+nms <- gsub("_", " ", nms)
+names(files) <- as.numeric(nms)
 
-rgl::polygon3d(ch, ch$nWeek100k)
+files <- files[order(names(files))]
 
-
-
-for(i in c(10:46)){
-  x <- weeklyVals[weeklyVals$week == i,]  
-  ch$nWeek100k <- x$nWeek100k[match(ch$kt, x$kt)]
-  y <- raster::raster(ext = extent(ch))
-  chRas <- rasterize(ch, y, field = ch$nWeek100k)
-  clrs <- x$clr[order(x$kt)]
-  rgl::open3d(windowRect = c(0, 00, 1200, 1000))
-  rgl::rgl.viewpoint( theta = 40, phi = 0, fov = 40, zoom = 1, 
-                      scale = par3d("scale"), interactive = TRUE, 
-                      type = c("userviewpoint", "modelviewpoint") )
-  rasterVis::plot3D(chRas, col = clrs, useLegend = T, rev = F, theta = 40, phi = 200, r = 150, asp = 1, smooth = T, zlim = c(0, 1400))
-  rgl::snapshot3d(paste0("C:/Users/JS/Documents/R/Uholka/6_30daychallenge/maps/day25/", i, "_day25.png"))
-}
-
-treemap::treemap(x, index = "kt", vSize = "nWeek100k", vColor = "clr", type = "color")
-
+images <- purrr::map(files, magick::image_read)
+images <- magick::image_join(images)
+images <- magick::image_scale(images, "1500x2000")
+animation <- magick::image_animate(images, fps = 2, optimize = T)
+magick::image_write(animation, paste0(w_dir, "/maps/day25.gif"))
