@@ -10,7 +10,7 @@
 # Set up R ----------------------------------------------------------------
 
 
-requiredPackages <- c("dplyr", "raster", "sp", "lubridate", "rgeos", "readxl", "purrr", "magick")
+requiredPackages <- c("dplyr", "raster", "sp", "lubridate", "rgeos", "readxl", "purrr", "magick", "gifski")
 
 
 # install/load required packages:
@@ -99,17 +99,17 @@ for(i in c(4:47)){
   par(mar = rep(.8, 4))
 
   layout(lyt, widths = rep(1, 6), heights = rep(1, 5))
-
-
-  
   
   x <- weeklyVals[weeklyVals$week == i,]
   cCentre$nWeekD <- x$nWeek100kD[match(cCentre$id, x$kt)]
   ch$col <- x$clr[match(ch$kt, x$kt)]
-  cCentre$nWeekD[is.na(cCentre$nWeekD)] <- 0
-  cBuff <- raster::buffer(cCentre, width = cCentre$nWeekD*750, dissolve = F)
+  cCent <- cCentre[!is.na(cCentre$nWeekD) & cCentre$nWeekD > 0,]
   plot(ch, col = ch$col)
-  plot(cBuff, add = T, lwd = 2)
+  if(nrow(cCent@data) != 0){
+    cBuff <- raster::buffer(cCent, width = cCent$nWeekD*750, dissolve = F)
+    plot(cBuff, add = T, lwd = 2)
+  }
+  
   plot(b1, add = T, lwd = 1.5)
   plot(b2, add = T, lwd = 1.5)
   plot(b3, add = T, lwd = 1.5)
@@ -150,12 +150,17 @@ for(i in c(4:47)){
   dev.off()
 }
 
+
+
+# Create Gif --------------------------------------------------------------
+
+
 # Now, we are going to create the gif. 
 # This requires quite some resources
 
 files <- list.files(paste0(w_dir, "/maps/png"), full.names = T)
 
-gc()
+gc(full = T)
 
 images <- purrr::map(files, magick::image_read)
 images <- magick::image_join(images)
