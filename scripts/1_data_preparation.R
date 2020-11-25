@@ -45,18 +45,19 @@ rm(new.packages, requiredPackages)
 
 # We are not using setwd() but define a char-string here
 # w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
-w_dir <- "C:/gitrepos/30daymapchallenge"
+# w_dir <- "C:/gitrepos/30daymapchallenge"
+w_dir <- "H:/R/30daymapchallenge"
 
 # Change this. In Fact, you only need the file COVID19_Fallzahlen_CH_total_v2.csv in the Covid19 repo.
 # data_dir <- "C:/Users/JS/Documents/R/covid_19"
-data_dir <- "C:/gitrepos/30daymapchallenge/data"
-
+# data_dir <- "C:/gitrepos/30daymapchallenge/data"
+data_dir <- "H:/R/30daymapchallenge/data"
 
 # Read Data ---------------------------------------------------------------
 
 
 # Now read in the f&%*in xls by BFS
-popDat <- readxl::read_excel("C:/gitrepos/30daymapchallenge/data/population_data.xlsx", sheet = 1, col_names = T)
+popDat <- readxl::read_excel(paste0(data_dir, "/population_data.xlsx"), sheet = 1, col_names = T)
 
 # this will download the administrative boundaries of Switzerland
 ch <- raster::getData("GADM", country = "CHE", level = 1)

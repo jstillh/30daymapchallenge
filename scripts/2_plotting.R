@@ -29,7 +29,8 @@ rm( new.packages, requiredPackages)
 
 # We are not using setwd() but define a char-string here
 # w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
-w_dir <- "C:/gitrepos/30daymapchallenge"
+# w_dir <- "C:/gitrepos/30daymapchallenge"
+w_dir <- "H:/R/30daymapchallenge"
 
 # Source the function by B. Bolker 
 source("http://www.math.mcmaster.ca/bolker/R/misc/legendx.R")
@@ -46,9 +47,9 @@ load(paste0(w_dir, "/data/dat.RData"))
 
 
 # Plotting rules: 
-# We first retrieve the max value for the weekly vals and will round this
-# value to the next 1k.
-maxV <- ceiling(max(weeklyVals$nWeek100k)/100)*100
+# We first retrieve the max value for the weekly vals and will round up this
+# value to the next 100.
+# maxV <- ceiling(max(weeklyVals$nWeek100k)/100)*100
 maxV <- ceiling(max(dailyVals$nWeek100k)/100)*100
 
 # Create a vector for the cuts which is used below for the creation of the 
@@ -56,7 +57,7 @@ maxV <- ceiling(max(dailyVals$nWeek100k)/100)*100
 cts <- seq(0, maxV, 10)
 
 # Create colorRamp
-clr <- colorRampPalette(RColorBrewer::brewer.pal(9, "Reds"))(length(cts))
+clr <- colorRampPalette(c("white", RColorBrewer::brewer.pal(9, "Reds")))(length(cts))
 names(clr) <- c(1:length(clr))
 
 # Cut weekly vals
@@ -102,7 +103,7 @@ maxDate <- lubridate::as_date(max(dailyVals$date))
 minDate <- lubridate::as_date(min(dailyVals$date))
 
 # for(i in c(4:47)){
-for(i in c(minDate:maxDate)){
+for(i in c(minDate:maxDate-2)){
   # Add a leading zero if i < 10
   # k <- ifelse(nchar(i) == 1, paste0("0", i), i)
   # k <- case_when(
@@ -113,14 +114,16 @@ for(i in c(minDate:maxDate)){
   k <- lubridate::as_date(i)
   
   # png(paste0(w_dir, "/maps/png/", k, "_day25.png")
-  png(paste0(w_dir, "/maps/png2/", k, "_day25.png")
+  # We are taking i here as this will properly order the output - this is important for the 
+  # the gif-creation.
+  png(paste0(w_dir, "/maps/png/", i, "_day25.png")
       , width = 2000, height = 1500, res = 200)
   par(mar = rep(.8, 4))
 
   layout(lyt, widths = rep(1, 6), heights = rep(1, 5))
   
   # x <- weeklyVals[weeklyVals$week == i,]
-  x <- dailyVals[dailyVals$date == i,]
+  x <- dailyVals[dailyVals$date == k,]
   cCentre$nWeekD <- x$nWeek100kD[match(cCentre$id, x$kt)]
   ch$col <- x$clr[match(ch$kt, x$kt)]
   cCent <- cCentre[!is.na(cCentre$nWeekD) & cCentre$nWeekD > 0,]
@@ -143,21 +146,25 @@ for(i in c(minDate:maxDate)){
   text(x = 780000, y = 85000+53*750, "25")
   
   plot(0, type = "n", axes = F, xlab = "", ylab = "")
-  text(0.57, 0.5, paste0("Date: ", i), adj = 0, cex = 2)
+  text(0.57, 0.5, format(k, "%d.%m.%y"), adj = 0, cex = 2)
 
   
-  plot(0, xlim = c(3, 52), ylim = c(0, 55000), axes = F, type = "n", ylab = "", xlab = "week")
-  lines(totCasesDaily$date[totCasesDaily$date <= i], totCasesDaily$nCases[totCasesDaily$date <= i], lwd = 1.5, col = "blue")
+  # Line plot for cases
+  plot(0, xlim = c(minDate, maxDate), ylim = c(0, 55000), axes = F, type = "n", ylab = "", xlab = "")
+  lines(totCasesDaily$date[totCasesDaily$date <= k], totCasesDaily$nCases[totCasesDaily$date <= k], lwd = 1.5, col = "blue")
   text( x= 4, y = 50000, "New cases/week", adj = 0)
   text(x = 4, y = 45000, paste("Total cases:", sum(totCasesDaily$nCases[totCasesDaily$date <= i])), adj = 0)
-  axis(1, at = seq(4, 48, 4), labels = seq(4, 48, 4), line = .5)
+  axis(1, at = seq(minDate, maxDate+10, 28)
+       , labels = format(lubridate::as_date(seq(minDate, maxDate+10, 28)), "%d.%m"), line = .5)
   axis(2, at = seq(0, 55000, 5000), labels = seq(0, 55000, 5000), las = 1)
   
-  plot(0, xlim = c(3, 52), ylim = c(0, 650), axes = F, type = "n", xlab = "week", ylab = "")
+  # Line plot for deceased
+  plot(0, xlim = c(minDate, maxDate), ylim = c(0, 650), axes = F, type = "n", ylab = "", xlab = "")
   lines(totCasesDaily$date[totCasesDaily$date <= i], totCasesDaily$nMort[totCasesDaily$date <= i], lwd = 1.5)
   text( x= 4, y = 590, "New deceased/week", adj = 0)
   text(x = 4, y = 530, paste("Total deceased:", sum(totCasesDaily$nMort[totCasesDaily$date <= i])), adj = 0)
-  axis(1, at = seq(4, 48, 4), labels = seq(4, 48, 4), line = .5)
+  axis(1, at = seq(minDate, maxDate+10, 28)
+       , labels = format(lubridate::as_date(seq(minDate, maxDate+10, 28)), "%d.%m"), line = .5)
   axis(2, at = seq(0, 650, 50), labels = seq(0, 650, 50), las = 1)
   
   # Add color-legend
