@@ -98,18 +98,19 @@ totCasesDaily <- dailyVals %>%
             nMort = sum(nWeekDead)) %>% 
   as.data.frame()
 
-maxDate <- max(dailyVals$date)
-minDate <- min(dailyVals$date)
+maxDate <- lubridate::as_date(max(dailyVals$date))
+minDate <- lubridate::as_date(min(dailyVals$date))
 
 # for(i in c(4:47)){
 for(i in c(minDate:maxDate)){
   # Add a leading zero if i < 10
   # k <- ifelse(nchar(i) == 1, paste0("0", i), i)
-  k <- case_when(
-    nchar(i) == 1 ~ paste0("00", i),
-    nchar(i) == 2 ~ paste0("0", i),
-    TRUE ~ paste(i)
-  )
+  # k <- case_when(
+  #   nchar(i) == 1 ~ paste0("00", i),
+  #   nchar(i) == 2 ~ paste0("0", i),
+  #   TRUE ~ paste(i)
+  # )
+  k <- lubridate::as_date(i)
   
   # png(paste0(w_dir, "/maps/png/", k, "_day25.png")
   png(paste0(w_dir, "/maps/png2/", k, "_day25.png")
@@ -142,20 +143,20 @@ for(i in c(minDate:maxDate)){
   text(x = 780000, y = 85000+53*750, "25")
   
   plot(0, type = "n", axes = F, xlab = "", ylab = "")
-  text(0.57, 0.5, paste0("Week ", i), adj = 0, cex = 2)
+  text(0.57, 0.5, paste0("Date: ", i), adj = 0, cex = 2)
 
   
   plot(0, xlim = c(3, 52), ylim = c(0, 55000), axes = F, type = "n", ylab = "", xlab = "week")
-  lines(totCases$week[totCases$week <= i], totCases$nCases[totCases$week <= i], lwd = 1.5, col = "blue")
+  lines(totCasesDaily$date[totCasesDaily$date <= i], totCasesDaily$nCases[totCasesDaily$date <= i], lwd = 1.5, col = "blue")
   text( x= 4, y = 50000, "New cases/week", adj = 0)
-  text(x = 4, y = 45000, paste("Total cases:", sum(totCases$nCases[totCases$week <= i])), adj = 0)
+  text(x = 4, y = 45000, paste("Total cases:", sum(totCasesDaily$nCases[totCasesDaily$date <= i])), adj = 0)
   axis(1, at = seq(4, 48, 4), labels = seq(4, 48, 4), line = .5)
   axis(2, at = seq(0, 55000, 5000), labels = seq(0, 55000, 5000), las = 1)
   
   plot(0, xlim = c(3, 52), ylim = c(0, 650), axes = F, type = "n", xlab = "week", ylab = "")
-  lines(totCases$week[totCases$week <= i], totCases$nMort[totCases$week <= i], lwd = 1.5)
+  lines(totCasesDaily$date[totCasesDaily$date <= i], totCasesDaily$nMort[totCasesDaily$date <= i], lwd = 1.5)
   text( x= 4, y = 590, "New deceased/week", adj = 0)
-  text(x = 4, y = 530, paste("Total deceased:", sum(totCases$nMort[totCases$week <= i])), adj = 0)
+  text(x = 4, y = 530, paste("Total deceased:", sum(totCasesDaily$nMort[totCasesDaily$date <= i])), adj = 0)
   axis(1, at = seq(4, 48, 4), labels = seq(4, 48, 4), line = .5)
   axis(2, at = seq(0, 650, 50), labels = seq(0, 650, 50), las = 1)
   
