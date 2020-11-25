@@ -183,7 +183,7 @@ for(i in c(minDate:maxDate-2)){
 
 
 # Now, we are going to create the gif. 
-# This requires quite some resources
+# This requires quite some resources and time in this case here. 
 
 files <- list.files(paste0(w_dir, "/maps/png"), full.names = T)
 
@@ -191,6 +191,6 @@ gc(full = T)
 
 images <- purrr::map(files, magick::image_read)
 images <- magick::image_join(images)
-images <- magick::image_scale(images, "1500x2000")
+# images <- magick::image_scale(images, "1500x2000")
 animation <- magick::image_animate(images, fps = 10, optimize = T)
-magick::image_write(animation, paste0(w_dir, "/maps/day25.gif"))
+magick::image_write(animation, paste0(w_dir, "/maps/day25_daily.gif"))
