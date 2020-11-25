@@ -1,5 +1,5 @@
 # 30daymapchallenge
-*Simon Graf, Jonas Stillhard*  
+*[Simon Graf](https://github.com/simgraworldwide), [Jonas Stillhard](https://github.com/jstillh)*  
 
 This repository contains data and scripts for the covid-map based on the covid-data of open data zh.  
 
