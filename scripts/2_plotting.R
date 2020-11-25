@@ -28,7 +28,8 @@ rm( new.packages, requiredPackages)
 
 
 # We are not using setwd() but define a char-string here
-w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
+# w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
+w_dir <- "C:/gitrepos/30daymapchallenge"
 
 # Source the function by B. Bolker 
 source("http://www.math.mcmaster.ca/bolker/R/misc/legendx.R")
@@ -48,6 +49,7 @@ load(paste0(w_dir, "/data/dat.RData"))
 # We first retrieve the max value for the weekly vals and will round this
 # value to the next 1k.
 maxV <- ceiling(max(weeklyVals$nWeek100k)/100)*100
+maxV <- ceiling(max(dailyVals$nWeek100k)/100)*100
 
 # Create a vector for the cuts which is used below for the creation of the 
 # color ramp and the cutting.
@@ -59,10 +61,11 @@ names(clr) <- c(1:length(clr))
 
 # Cut weekly vals
 weeklyVals$grps <- cut(weeklyVals$nWeek100k, seq(0, maxV, 10), labels = F, include.lowest = T)
+dailyVals$grps <- cut(dailyVals$nWeek100k, seq(0, maxV, 10), labels = F, include.lowest = T)
 
 # We now add the colors to the weekly vals DF
 weeklyVals$clr <- clr[match(weeklyVals$grps, names(clr))]
-
+dailyVals$clr <- clr[match(dailyVals$grps, names(clr))]
 
 # Add buffer for legend. 
 # Bit hacky...
@@ -89,18 +92,34 @@ totCases <- weeklyVals %>%
                    , nMort = sum(nWeekDead)) %>% 
   as.data.frame()
 
+totCasesDaily <- dailyVals %>% 
+  group_by(date) %>% 
+  summarise(nCases = sum(nWeekNew), 
+            nMort = sum(nWeekDead)) %>% 
+  as.data.frame()
 
-for(i in c(4:47)){
+maxDate <- max(dailyVals$date)
+minDate <- min(dailyVals$date)
+
+# for(i in c(4:47)){
+for(i in c(minDate:maxDate)){
   # Add a leading zero if i < 10
-  k <- ifelse(nchar(i) == 1, paste0("0", i), i)
+  # k <- ifelse(nchar(i) == 1, paste0("0", i), i)
+  k <- case_when(
+    nchar(i) == 1 ~ paste0("00", i),
+    nchar(i) == 2 ~ paste0("0", i),
+    TRUE ~ paste(i)
+  )
   
-  png(paste0(w_dir, "/maps/png/", k, "_day25.png")
+  # png(paste0(w_dir, "/maps/png/", k, "_day25.png")
+  png(paste0(w_dir, "/maps/png2/", k, "_day25.png")
       , width = 2000, height = 1500, res = 200)
   par(mar = rep(.8, 4))
 
   layout(lyt, widths = rep(1, 6), heights = rep(1, 5))
   
-  x <- weeklyVals[weeklyVals$week == i,]
+  # x <- weeklyVals[weeklyVals$week == i,]
+  x <- dailyVals[dailyVals$date == i,]
   cCentre$nWeekD <- x$nWeek100kD[match(cCentre$id, x$kt)]
   ch$col <- x$clr[match(ch$kt, x$kt)]
   cCent <- cCentre[!is.na(cCentre$nWeekD) & cCentre$nWeekD > 0,]

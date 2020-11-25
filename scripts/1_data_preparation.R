@@ -26,7 +26,7 @@
 # Set up R ----------------------------------------------------------------
 
 
-requiredPackages <- c("dplyr", "raster", "sp", "lubridate", "rgeos", "readxl")
+requiredPackages <- c("dplyr", "raster", "sp", "lubridate", "rgeos", "readxl", "rgdal", "tidyr", "zoo")
 
 
 # install/load required packages:
@@ -40,23 +40,23 @@ if (exists("requiredPackages")) {
   lapply(requiredPackages, library, character.only=T)
 }
 
-rm( new.packages, requiredPackages)
+rm(new.packages, requiredPackages)
 
 
 # We are not using setwd() but define a char-string here
-w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
-
+# w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
+w_dir <- "C:/gitrepos/30daymapchallenge"
 
 # Change this. In Fact, you only need the file COVID19_Fallzahlen_CH_total_v2.csv in the Covid19 repo.
-data_dir <- "C:/Users/JS/Documents/R/covid_19"
-
+# data_dir <- "C:/Users/JS/Documents/R/covid_19"
+data_dir <- "C:/gitrepos/30daymapchallenge/data"
 
 
 # Read Data ---------------------------------------------------------------
 
 
 # Now read in the f&%*in xls by BFS
-popDat <- readxl::read_excel("./data/population_data.xlsx", sheet = 1, col_names = T)
+popDat <- readxl::read_excel("C:/gitrepos/30daymapchallenge/data/population_data.xlsx", sheet = 1, col_names = T)
 
 # this will download the administrative boundaries of Switzerland
 ch <- raster::getData("GADM", country = "CHE", level = 1)
@@ -65,7 +65,8 @@ sp::plot(ch)
 
 
 # Read in covid data
-covidData <- read.csv(paste0(data_dir, "/COVID19_Fallzahlen_CH_total_v2.csv"), stringsAsFactors = F)
+# covidData <- read.csv(paste0(data_dir, "/COVID19_Fallzahlen_CH_total_v2.csv"), stringsAsFactors = F)
+covidData <- read.csv("https://raw.githubusercontent.com/openZH/covid_19/master/COVID19_Fallzahlen_CH_total_v2.csv", stringsAsFactors = F)
 bfsMapping <- read.csv(paste0(w_dir, "/data/mappingCanton_BFS.csv"))
 
 
@@ -89,6 +90,15 @@ str(covidData)
 
 ch <- sp::spTransform(ch, CRS("+init=epsg:21781"))
 
+# Complete date-canton combinations and smoothly fill NAs (for confirmed and deceased) in between while keeping NAs at the start and the end of each cantonal time series
+covidData <- covidData %>% 
+  complete(date, abbreviation_canton_and_fl) %>% 
+  group_by(abbreviation_canton_and_fl) %>% 
+  arrange(date) %>% 
+  mutate(ncumul_conf = round(na.fill(ncumul_conf, c(NA, "extend")), 0),
+         ncumul_deceased = round(na.fill(ncumul_deceased, c(NA, "extend")))) %>% 
+  ungroup()
+
 # Change date column to date formant
 covidData$date <- as.Date(covidData$date)
 covidData$week <- lubridate::week(covidData$date)
@@ -98,7 +108,6 @@ covidData <- covidData[covidData$abbreviation_canton_and_fl != "FL",]
 
 # Add BFS identifier
 covidData$bfs <- bfsMapping$bfs[match(covidData$abbreviation_canton_and_fl, bfsMapping$abk)]
-
 
 # Order df on date and canton to be able to do the lag operation below
 covidData <- covidData[order(covidData$abbreviation_canton_and_fl, covidData$date),]
@@ -131,6 +140,16 @@ weeklyVals <- covidData %>%
 
 colnames(weeklyVals) <- c("kt", "week", "nWeekNew", "nWeekDead")
 
+# Create daily 7 day sums for each canton
+
+dailyVals <- covidData %>% 
+  group_by(abbreviation_canton_and_fl) %>% 
+  mutate(nWeekNew = rollsum(nconf, 7, fill = NA, align = "right"),
+         nWeekDead = rollsum(ndead, 7, fill = NA, align = "right")) %>% 
+  as.data.frame() %>% 
+  dplyr::select(kt = abbreviation_canton_and_fl, date, nWeekNew, nWeekDead) %>% 
+  mutate(nWeekNew = replace_na(nWeekNew, 0), nWeekDead = replace_na(nWeekDead, 0))
+
 
 # Prepare population data
 popDat <- as.data.frame(popDat)
@@ -155,12 +174,17 @@ popDat$bfs <- bfsMapping$bfs[match(popDat$kt, bfsMapping$abk)]
 popDat$pop100k <- popDat$pop1k/100
 
 weeklyVals$bfs <- bfsMapping$bfs[match(weeklyVals$kt, bfsMapping$abk)]
-
 weeklyVals$pop100k <- popDat$pop100k[match(weeklyVals$bfs, popDat$bfs)]
+
+dailyVals$bfs <- bfsMapping$bfs[match(dailyVals$kt, bfsMapping$abk)]
+dailyVals$pop100k <- popDat$pop100k[match(dailyVals$bfs, popDat$bfs)]
 
 # Create values per 100 k
 weeklyVals$nWeek100k <- weeklyVals$nWeekNew/weeklyVals$pop100k
 weeklyVals$nWeek100kD <- weeklyVals$nWeekDead/weeklyVals$pop100k
+
+dailyVals$nWeek100k <- dailyVals$nWeekNew/dailyVals$pop100k
+dailyVals$nWeek100kD <- dailyVals$nWeekDead/dailyVals$pop100k
 
 # Save the workspace. 
 save.image(paste0(w_dir, "./data/dat.RData"))
