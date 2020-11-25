@@ -11,5 +11,5 @@ This repository contains data and scripts for the covid-map based on the covid-d
 ---
 ### Requirements
 To run the scripts, you'll need the following packages (these will be installed automatically in the scripts)  
-`dplyr`, `raster`, `rgeos`, `sp`, `lubridate`, `rgeos`, `readxl`, `purrr` and `magick`.  
+`dplyr`, `raster`, `rgeos`, `sp`, `lubridate`, `rgeos`, `readxl`, `rgdal`, `tidyr`, `zoo`, `purrr` and `magick`.  
 Additionally, the script `2_plotting` will source a function by [B. Bolker](http://www.math.mcmaster.ca/bolker/R/misc/legendx.R). 
