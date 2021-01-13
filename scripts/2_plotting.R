@@ -28,9 +28,9 @@ rm( new.packages, requiredPackages)
 
 
 # We are not using setwd() but define a char-string here
-# w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
+w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
 # w_dir <- "C:/gitrepos/30daymapchallenge"
-w_dir <- "H:/R/30daymapchallenge"
+# w_dir <- "H:/R/30daymapchallenge"
 
 # Source the function by B. Bolker 
 source("http://www.math.mcmaster.ca/bolker/R/misc/legendx.R")
@@ -103,7 +103,7 @@ maxDate <- lubridate::as_date(max(dailyVals$date))
 minDate <- lubridate::as_date(min(dailyVals$date))
 
 # for(i in c(4:47)){
-for(i in c(minDate:maxDate-2)){
+for(i in c(minDate:maxDate-5)){
   # Add a leading zero if i < 10
   # k <- ifelse(nchar(i) == 1, paste0("0", i), i)
   # k <- case_when(
@@ -159,13 +159,13 @@ for(i in c(minDate:maxDate-2)){
   axis(2, at = seq(0, 55000, 5000), labels = seq(0, 55000, 5000), las = 1)
   
   # Line plot for deceased
-  plot(0, xlim = c(minDate, maxDate), ylim = c(0, 650), axes = F, type = "n", ylab = "", xlab = "")
+  plot(0, xlim = c(minDate, maxDate), ylim = c(0, 700), axes = F, type = "n", ylab = "", xlab = "")
   lines(totCasesDaily$date[totCasesDaily$date <= i], totCasesDaily$nMort[totCasesDaily$date <= i], lwd = 1.5)
   text(x= minDate+10, y = 590, "New deceased/week", adj = 0)
   # text(x= minDate+10, y = 530, paste("Total deceased:", sum(totCasesDaily$nMort[totCasesDaily$date <= i])), adj = 0)
   axis(1, at = seq(minDate, maxDate+10, 28)
        , labels = format(lubridate::as_date(seq(minDate, maxDate+10, 28)), "%d.%m"), line = .5)
-  axis(2, at = seq(0, 650, 50), labels = seq(0, 650, 50), las = 1)
+  axis(2, at = seq(0, 700, 50), labels = seq(0, 700, 50), las = 1)
   
   # Add color-legend
   plot(0, type = "n", axes = F, xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1))

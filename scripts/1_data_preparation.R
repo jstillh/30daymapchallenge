@@ -44,9 +44,9 @@ rm(new.packages, requiredPackages)
 
 
 # We are not using setwd() but define a char-string here
-# w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
+w_dir <- "C:/Users/JS/Documents/R/30daymapchallenge"
 # w_dir <- "C:/gitrepos/30daymapchallenge"
-w_dir <- "H:/R/30daymapchallenge"
+# w_dir <- "H:/R/30daymapchallenge"
 
 # Change this. In Fact, you only need the file COVID19_Fallzahlen_CH_total_v2.csv in the Covid19 repo.
 # data_dir <- "C:/Users/JS/Documents/R/covid_19"
@@ -189,3 +189,4 @@ dailyVals$nWeek100kD <- dailyVals$nWeekDead/dailyVals$pop100k
 
 # Save the workspace. 
 save.image(paste0(w_dir, "./data/dat.RData"))
+
